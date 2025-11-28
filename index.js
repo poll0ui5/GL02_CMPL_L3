@@ -62,7 +62,6 @@ cli
     .command('free-slots', 'Get available slots for a room')
     .argument('<file>', 'The file containing room schedule data')
     .argument('<room>', 'The room code')
-    .option('-d, --day <day>', 'Day of the week to check availability', {validator: cli.STRING, default: 'All'})
     .action(({args, options, logger}) => {
         fs.readFile(args.file, 'utf8', (err, data) => {
             if (err) {
@@ -78,7 +77,7 @@ cli
     .command('available-rooms', 'Find rooms available for a specific time slot')
     .argument('<file>', 'The file containing room schedule data')
     .argument('<time>', 'Time to check for available rooms (HH:MM)')
-    .option('-d, --day <day>', 'Day of the week to check availability', {validator: cli.STRING, default: 'All'})
+    .argument('<day>', 'Day of the week to check availability', {validator: cli.STRING, default: 'All'})
     .action(({args, options, logger}) => {
         fs.readFile(args.file, 'utf8', (err, data) => {
             if (err) {
@@ -113,6 +112,7 @@ cli
     //Vérification des conflits de planning
     .command('check-conflicts', 'Check for scheduling conflicts')
     .argument('<file>', 'The file containing schedule data to check for conflicts')
+    .argument('<time>', 'Time to check for conflicts')
     .action(({args, logger}) => {
         fs.readFile(args.file, 'utf8', (err, data) => {
             if (err) {
@@ -127,7 +127,6 @@ cli
     //Statistiques d’occupation des salles
     .command('room-usage-stats', 'Get room usage statistics')
     .argument('<file>', 'The file containing room usage data')
-    .option('-d, --day <day>', 'Day of the week to gather stats for', {validator: cli.STRING, default: 'All'})
     .action(({args, options, logger}) => {
         fs.readFile(args.file, 'utf8', (err, data) => {
             if (err) {
