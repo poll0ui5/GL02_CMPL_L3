@@ -3,10 +3,40 @@ const colors = require('colors');
 const CruParser = require("./CruParser");
 
 const canvas = require('canvas');
+const path = require("node:path");
+const SlotSet = require("./SlotSet");
 
 const cli = require('@caporal/core').default;
 
 const cruParser = new CruParser();
+
+function getAllSlots() {
+    const baseDir = path.join(__dirname, 'data');
+
+    if (!fs.existsSync(baseDir)) {
+        console.error('Can\'t find a database !'.red);
+        return;
+    }
+
+    const subDirs = fs.readdirSync(baseDir, {withFileTypes: true})
+        .filter(d => d.isDirectory())
+        .map(d => path.join(baseDir, d.name));
+
+    let slotsSet = SlotSet.empty();
+
+    subDirs.forEach(dir => {
+        const cruFile = path.join(dir, 'edt.cru');
+        if (fs.existsSync(cruFile)) {
+            const data = fs.readFileSync(cruFile, 'utf8');
+            const slots = cruParser.parse(data).toArray();
+
+            slots.forEach(slot => {
+                slotsSet.add(slot);
+            });
+        }
+    });
+    return slotsSet
+}
 
 const path = require('path');
 
@@ -158,45 +188,6 @@ cli
             let slotSet = cruParser.parse(data);
         });
     });
-
-
-
-
-  //Ajout de la fonctionnalité F2 
-
-cli
-  .command('f2', 'Lancer la fonctionnalité F2 : capacité d’une salle')
-  .action(async ({ logger }) => {
-      const readline = require('readline').createInterface({
-          input: process.stdin,
-          output: process.stdout
-      });
-
-      readline.question('Code de la salle dont tu veux connaitre la capacité : ', roomCode => {
-          logger.info(`Recherche de la salle "${roomCode}"...`.blue);
-          F2.run(roomCode);
-          readline.close();
-      });
-  });
-
-  //ajout de la fonctionnalité F3
-  cli
-  .command('f3', 'Lancer la fonctionnalité F3 : emploi du temps d’une salle')
-   .action(async ({ logger }) => {
-      const readline = require('readline').createInterface({
-          input: process.stdin,
-          output: process.stdout
-      });
-
-     readline.question('Entre le code de la salle dont tu veux lemploi du temps : ', roomCode => {
-          logger.info(`Recherche de l'emploi du temps pour la salle "${roomCode}"...`.blue);
-          F3.run(roomCode);
-          readline.close();
-      });
-
-  });
-
-
 
 cli.run(process.argv.slice(2));
 
