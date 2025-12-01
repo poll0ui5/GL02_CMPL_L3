@@ -1,83 +1,242 @@
-# Outil de suivi d'occupation des salles
+# 🏫 Outil de Suivi d’Occupation des Salles
 
-## Comprendre les fichiers
+**Projet GL02 – UTT**
+**Auteur : TELYCHKO Yevhenii, KABINET Sylla, LOUARN Dina, CRAVE Sixtine**
 
-### Slot.js
+---
 
-Le fichier `Slot.js` définit la classe `Slot`, qui contient les informations concernant un créneau horaire (par exemple,
-la salle, l'heure, le jour, etc.). Chaque créneau représente une période de temps spécifique pour un cours.
+## 📌 Présentation générale
 
-Méthodes principales de `Slot` :
+Cet outil en ligne de commande permet de **consulter, analyser et exporter** les informations issues des fichiers d’emploi du temps **CRU** (format utilisé à l’UTT).
+Il permet notamment :
 
-- **equalsSlot** : Compare deux créneaux pour vérifier s'ils sont identiques.
-- **overlapsSlot** : Vérifie si deux créneaux se chevauchent en termes de temps.
-- **compareSlot** : Compare deux créneaux par jour et heure de début pour les trier.
+* de rechercher les salles associées à un cours,
+* de consulter la capacité des salles,
+* de vérifier la disponibilité hebdomadaire d’une salle,
+* de trouver les salles libres sur un créneau,
+* de détecter des conflits de planification,
+* d’exporter un emploi du temps au format **iCalendar (.ics)**,
+* d’obtenir des statistiques d’occupation des salles.
 
-```js
-// Exemple d'utilisation de la classe Slot
-const Slot = require('./Slot');
+L’application est développée en **Node.js**, en respectant une architecture modulaire, robuste et maintenable.
 
-let slot1 = new Slot({
-    courseCode: 'ME01',
-    lessonType: 'CM',
-    capacity: 30,
-    day: 'L',
-    startTime: '10:00',
-    endTime: '12:00',
-    room: 'A101',
-    subgroup: 'F1',
-    groupIndex: 1
-});
+---
 
-/// Exemple d'utilisation de la méthode Slot 
+## 📁 Structure du projet
 
-let slot2 = new Slot({
-    courseCode: 'GL02',
-    lessonType: 'CM',
-    capacity: 30,
-    day: 'T',
-    startTime: '10:00',
-    endTime: '12:00',
-    room: 'A101',
-    subgroup: 'F1',
-    groupIndex: 1
-});
-
-slot1.equalsSlot(slot2) // compare deux créneaux
-//Sortie attendue : false
+```
+.
+├── CruParser.js             # Parseur du format CRU
+├── Slot.js                  # Type Créneau (Cours)
+├── SlotSet.js               # Ensemble de créneaux
+├── ScheduleService.js       # Logique métier (F1–F8)
+├── index.js                 # Interface CLI (Caporal)
+├── data/                    # Répertoires contenant les fichiers edt.cru
+└── spec/                    # Tests Jasmine
 ```
 
-### SlotSet.js
+---
 
-Le fichier `SlotSet.js` gère une collection d'objets `Slot`. Il permet d'ajouter, de supprimer et de filtrer les
-créneaux.
+## ⚙️ Installation
 
-Méthodes principales de SlotSet :
+### 1. Installer les dépendances
 
-- **add** : Ajoute un créneau à l'ensemble s'il n'est pas déjà présent.
-- **contains** : Vérifie si un créneau existe déjà dans l'ensemble.
-- **remove**: Supprime un créneau spécifique de l'ensemble.
-- **filter** : Filtre les créneaux en fonction d'une condition donnée.
-- **sort** : Trie les créneaux par jour et heure de début.
-
-```js
-// Exemple d'utilisation de la classe SlotSet
-const SlotSet  = require('./SlotSet');
-
-let slotSet = SlotSet.empty();
-slotSet.add(slot1);
-console.log(slotSet.toArray());  // Affiche tous les créneaux sous forme de tableau
+```bash
+npm install
 ```
 
-### CruParser
+### 2. Ajouter les fichiers CRU
 
-J'ai essayé de rendre l'utilisation du parseur aussi simple que possible, donc vous n'avez besoin de connaître qu'une seule fonction.
+Créer un répertoire :
 
-En gros, vous avez juste besoin de la fonction `parse` :
-
-```js
-const CruParser = require('./CruParser');
-const parser = new CruParser(true); // true signifie que vous pouvez voir la sortie dans la console
-const slotSet = parser.parse(data) // data : le texte provenant d'un fichier dans un dossier "data"
-console.log(slotSet.toArray()); // Une façon simple de visualiser le résultat
 ```
+/data/NOM_PARCOURS/edt.cru
+```
+
+Exemple :
+
+```
+data/TC/edt.cru
+data/SRT/edt.cru
+```
+
+Chaque sous-dossier contenant un fichier `edt.cru` sera automatiquement chargé.
+
+---
+
+## ▶️ Exécution de l’outil
+
+Lancer l’outil avec :
+
+```bash
+node index.js --help
+```
+
+Toutes les commandes disponibles seront affichées.
+
+---
+
+## 🧭 Commandes disponibles (F1 à F8)
+
+### **F1 – Recherche de salles par cours**
+
+```bash
+node index.js search-rooms ME01
+```
+
+### **F2 – Capacité d’une salle**
+
+```bash
+node index.js room-capacity S101
+```
+
+### **F3 – Créneaux libres d’une salle**
+
+```bash
+node index.js free-slots S101
+```
+
+### **F4 – Salles libres pour un créneau**
+
+```bash
+node index.js available-rooms 14:00 16:00 ME
+```
+
+### **F5 – Export iCalendar (.ics)**
+
+```bash
+node index.js generate-icalendar \
+  --courses ME01,ME03 \
+  --start 2025-01-06 \
+  --end 2025-02-01 \
+  --output mon_agenda.ics
+```
+
+### **F6 – Vérification des conflits**
+
+```bash
+node index.js check-conflicts
+```
+
+### **F7 – Statistiques d’occupation des salles**
+
+```bash
+node index.js room-usage-stats
+```
+
+### **F8 – Classement des salles par capacité**
+
+```bash
+node index.js rank-rooms
+```
+
+---
+
+## 🧠 Architecture & Conception
+
+### **1. Modèle : `Slot` (Type Créneau)**
+
+Implémente la sémantique décrite dans la spécification :
+
+* `egal(C1, C2)`
+* `chevauche(C1, C2)`
+* `ordre(C1, C2)`
+
+### **2. Ensemble : `SlotSet`**
+
+Respecte les axiomes :
+
+* unicité des créneaux,
+* opérations d’ensemble : `ajouter`, `retirer`, `filtrer`, `contient`.
+
+### **3. Parseur : `CruParser`**
+
+Fonctionnalités :
+
+* lecture du format CRU,
+* conversion en instances `Slot`,
+* génération iCalendar conforme à la RFC 5545.
+
+### **4. Service métier : `ScheduleService`**
+
+Implémente toutes les exigences fonctionnelles F1–F8 :
+
+* recherche de salles,
+* disponibilité,
+* conflits,
+* statistiques,
+* export iCal, etc.
+
+### **5. Interface CLI : `index.js`**
+
+Développée avec **Caporal.js**, elle gère :
+
+* parsing des arguments,
+* validation de saisie,
+* retours utilisateur clairs.
+
+---
+
+## 🧪 Tests automatisés (Jasmine)
+
+Les tests se trouvent dans :
+
+```
+/spec/parser_syntactic_spec.js   # Tests syntaxiques du parser
+/spec/parser_semantic_spec.js    # Tests sémantiques (chevauchement, égalité...)
+```
+
+Pour lancer les tests :
+
+```bash
+npm test
+```
+
+Tous les tests doivent passer :
+
+```
+12 specs, 0 failures
+```
+
+---
+
+## ✔️ Conformité aux exigences (Extraits du cahier des charges)
+
+| Exigence | Statut | Implémentation                      |
+| -------- | ------ | ----------------------------------- |
+| F1       | ✔️     | ScheduleService.searchRoomsByCourse |
+| F2       | ✔️     | ScheduleService.getRoomCapacity     |
+| F3       | ✔️     | ScheduleService.getFreeSlotsForRoom |
+| F4       | ✔️     | ScheduleService.getAvailableRooms   |
+| F5       | ✔️     | CruParser.toICalendar               |
+| F6       | ✔️     | ScheduleService.checkConflicts      |
+| F7       | ✔️     | ScheduleService.getRoomUsageStats   |
+| F8       | ✔️     | ScheduleService.rankRoomsByCapacity |
+| N1–N6    | ✔️     | CLI + modularité + robustesse       |
+
+---
+
+## 📚 Technologies utilisées
+
+* **Node.js**
+* **JavaScript (CommonJS)**
+* **Caporal.js** (CLI)
+* **Jasmine** (tests)
+* **RFC 5545** pour l’export iCalendar
+
+---
+
+## 👤 Auteur
+
+- **TELYCHKO Yevhenii**
+- **KABINET Sylla**
+- **LOUARN Dina**
+- **CRAVE Sixtine**
+
+---
+
+## 📄 Licence
+
+Projet universitaire — libre réutilisation dans un cadre pédagogique.
+
+
