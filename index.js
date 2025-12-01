@@ -77,7 +77,21 @@ cli
     .argument('<room>', 'The room code')
     .action(({args, logger}) => {
         logger.info(`Fetching capacity for room: ${args.room}`.blue);
-        let slotSet = getAllSlots();
+        let slotSet = getAllSlots().toArray();
+        let capacities = []; // Stocke les capacités trouvées correspondants a la salle
+
+        slotSet.forEach(slot => {
+            if (slot.room && slot.room.toUpperCase() === args.room.toUpperCase()) {
+                capacities.push(slot.capacity);
+            }
+        });
+
+        if (capacities.length === 0) {
+            console.error(`Salle "${args.room}" introuvable dans la base de données.`.red);
+        } else {
+            const maxCapacity = Math.max(...capacities);
+            console.log(`Salle ${args.room.toUpperCase()} a une capacité de ${maxCapacity} places`.green);
+        }
     })
 
     //Créneaux libres d’une salle
@@ -185,8 +199,7 @@ cli
     .command('generate-icalendar', 'Generate an iCalendar file for the schedule')
     .argument('<file>', 'The file containing the schedule data to convert into an iCalendar')
     .option('-o, --output <output>', 'Path to save the generated iCalendar file', {
-        validator: cli.STRING,
-        default: './schedule.ics'
+        validator: cli.STRING, default: './schedule.ics'
     })
     .action(({args, options, logger}) => {
         logger.info(`Generating iCalendar file for schedule from: ${args.file}`.blue);
@@ -216,8 +229,8 @@ cli
     .command('rank-rooms', 'Rank rooms by their capacity')
     .argument('<file>', 'The file containing room data to rank')
     .action(({args, logger}) => {
-            logger.info(`Ranking rooms by capacity from file: ${args.file}`.blue);
-            let slotSet = getAllSlots();
+        logger.info(`Ranking rooms by capacity from file: ${args.file}`.blue);
+        let slotSet = getAllSlots();
     });
 
 cli.run(process.argv.slice(2));
