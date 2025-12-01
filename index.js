@@ -124,7 +124,7 @@ cli
 
         slotSet.toArray().forEach(slot => {
             slotToReserve.room = slot.room;
-            if(slot.overlapsSlot(slotToReserve)){
+            if (slot.overlapsSlot(slotToReserve)) {
                 roomsBusy.add(slot.room);
             }
         })
@@ -156,17 +156,23 @@ cli
 
     //Vérification des conflits de planning
     .command('check-conflicts', 'Check for scheduling conflicts')
-    .argument('<file>', 'The file containing schedule data to check for conflicts')
-    .argument('<time>', 'Time to check for conflicts')
     .action(({args, logger}) => {
-        fs.readFile(args.file, 'utf8', (err, data) => {
-            if (err) {
-                return logger.error(`Error reading file: ${err}`.red);
+        logger.info(`Checking for conflicts in schedule`.blue);
+        let slotSet = getAllSlots().toArray();
+        let isOverlap = false;
+        for (let i = 0; i < slotSet.length; i++) {
+            for (let j = i + 1; j < slotSet.length - 1; j++) {
+                if (slotSet[i].overlapsSlot(slotSet[j])) {
+                    isOverlap = true;
+                    let slot1 = slotSet[i];
+                    let slot2 = slotSet[j];
+                    logger.warn(`Salle ${slot1.room}, ${slot1.day} ${slot1.startTime}-${slot1.endTime} chevauche ${slot2.startTime}-${slot2.endTime}`.red);
+                }
             }
-
-            logger.info(`Checking for conflicts in schedule from file: ${args.file}`.blue);
-            let slotSet = cruParser.parse(data);
-        });
+        }
+        if (!isOverlap) {
+            logger.info(`Données valides, aucune collision détectée`.green)
+        }
     })
 
     //Statistiques d’occupation des salles
