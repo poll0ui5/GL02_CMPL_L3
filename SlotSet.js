@@ -1,5 +1,3 @@
-const {Slot} = require("./Slot");
-
 class SlotSet {
     constructor() {
         /** @type {Slot[]} */
