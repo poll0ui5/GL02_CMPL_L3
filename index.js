@@ -218,21 +218,79 @@ cli
 
     //Statistiques d’occupation des salles
     .command('room-usage-stats', 'Get room usage statistics')
-    .argument('<file>', 'The file containing room usage data')
     .action(({args, options, logger}) => {
-        logger.info(`Gathering room usage stats from file: ${args.file} for day: ${options.day}`.blue);
-        let slotSet = getAllSlots();
 
+
+        logger.info(`Gathering room usage stats from file: ${args.file}`.blue);
+        const slotSet = getAllSlots().toArray();
+
+        if (slotSet.length === 0) {
+            return logger.error("No slots found in file.".red);
+        }
+
+        // Total number of hours in a normal week (8h*5j = 40h)
+        const TOTAL_AVAILABLE_HOURS = 40;
+
+        const roomStats = {};
+
+        slotSet.forEach(slot => {
+            // Parse "HH:MM" into numbers
+            const [sh, sm] = slot.startTime.split(":").map(Number);
+            const [eh, em] = slot.endTime.split(":").map(Number);
+
+            const duration = (eh * 60 + em) - (sh * 60 + sm);
+
+            if (!roomStats[slot.room]) {
+                roomStats[slot.room] = 0;
+            }
+
+            roomStats[slot.room] += duration;
+        });
+
+        logger.info("=== Room Occupancy Statistics ===".yellow);
+
+        let sumRates = 0, roomsCount = 0;
+
+        Object.keys(roomStats).forEach(room => {
+            const usedHours = roomStats[room] / 60;
+            const rate = (usedHours / TOTAL_AVAILABLE_HOURS) * 100;
+            sumRates += rate;
+            roomsCount++;
+
+            logger.info(`${room}: ${rate.toFixed(2)}% occupied`.green);
+        });
+
+        const avg = sumRates / roomsCount;
+
+        logger.info(`\nAverage occupancy rate: ${avg.toFixed(2)}%`.cyan);
     })
 
     //Classement des salles par capacité
     .command('rank-rooms', 'Rank rooms by their capacity')
-    .argument('<file>', 'The file containing room data to rank')
     .action(({args, logger}) => {
         logger.info(`Ranking rooms by capacity from file: ${args.file}`.blue);
-        let slotSet = getAllSlots();
-    });
+        let slotSet = getAllSlots().toArray();
+        if (slotSet.length === 0) {
+            return logger.error("No slots found in file.".red);
+        }
 
+        const capacityMap = {};
+
+        slotSet.forEach(slot => {
+            if (!capacityMap[slot.capacity]) {
+                capacityMap[slot.capacity] = new Set();
+            }
+            capacityMap[slot.capacity].add(slot.room);
+        });
+
+        const sortedCap = Object.keys(capacityMap).map(Number).sort((a, b) => b - a);
+
+        logger.info("=== Room Ranking by Capacity ===".yellow);
+
+        sortedCap.forEach(cap => {
+            logger.info(`${cap} places: ${capacityMap[cap].size} room(s)`.green);
+        });
+    })
 cli.run(process.argv.slice(2));
 
 // Export to .ics (example Monday = 6 Jan 2025)
