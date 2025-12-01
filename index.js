@@ -207,7 +207,6 @@ cli
         logger.info("Classement des salles par capacité...".blue);
         try {
             const ranking = service.rankRoomsByCapacity();
-            logger.info("Classement des salles par capacité".yellow);
             ranking.forEach(item => {
                 logger.info(
                     `${item.capacity} places: ${item.roomsCount} chambre(s)`.green

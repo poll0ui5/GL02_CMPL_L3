@@ -281,14 +281,12 @@ class ScheduleService {
         }
 
         const slotSet = this.getAllSlots();
-        const ics = this.cruParser.toICalendar(slotSet, {
+        return this.cruParser.toICalendar(slotSet, {
             courses,
             periodStart,
             periodEnd,
             uidDomain
         });
-
-        return ics;
     }
 
     // ---------- F6: Vérification des conflits de planning ----------
@@ -387,15 +385,13 @@ class ScheduleService {
             capacityMap[slot.capacity].add(slot.room);
         });
 
-        const result = Object.keys(capacityMap)
+        return Object.keys(capacityMap)
             .map(Number)
             .sort((a, b) => b - a)
             .map(cap => ({
                 capacity: cap,
                 roomsCount: capacityMap[cap].size
             }));
-
-        return result;
     }
 }
 
