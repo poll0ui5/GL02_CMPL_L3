@@ -20,6 +20,44 @@ function parseDate(value, label) {
     return new Date(y, m, d);
 }
 
+/**
+ * Génère une frise chronologique ASCII pour une journée (08h-20h)
+ * 1 caractère = 30 minutes. [====] = Occupé, [....] = Libre
+ */
+function renderTimeline(freeIntervals) {
+    const startHour = 8;
+    const endHour = 20;
+    const slotsPerHour = 2; // pas de 30 min
+    const totalSlots = (endHour - startHour) * slotsPerHour; // 24 blocs
+
+    // 1 = Occupé (défaut), 0 = Libre
+    const timeline = new Array(totalSlots).fill(1); 
+
+    freeIntervals.forEach(interval => {
+        const [h1, m1] = interval.start.split(':').map(Number);
+        const [h2, m2] = interval.end.split(':').map(Number);
+
+        // Conversion heure -> index tableau
+        let startIndex = (h1 - startHour) * slotsPerHour + (m1 / 30);
+        let endIndex = (h2 - startHour) * slotsPerHour + (m2 / 30);
+
+        // Sécurité bornes
+        startIndex = Math.max(0, startIndex);
+        endIndex = Math.min(totalSlots, endIndex);
+
+        for (let i = startIndex; i < endIndex; i++) {
+            timeline[i] = 0; // Marquer comme libre
+        }
+    });
+
+    // Construction visuelle
+    const visual = timeline.map(status => {
+        return status === 1 ? "=".red : ".".green;
+    }).join("");
+
+    return `08h [${visual}] 20h`.white;
+}
+
 cli
     .version("Outil de suivi d'occupation des salles")
     .version("0.2.0")
@@ -55,25 +93,32 @@ cli
         }
     })
 
-    // F3 – Créneaux libres d’une salle
+ // F3 – Créneaux libres d’une salle (Version Visuelle)
     .command("free-slots", "Obtenir des créneaux disponibles pour une salle")
     .argument("<room>", "le code de salle")
     .action(({ args, logger }) => {
-        logger.info(`Obtenir des créneaux disponibles pour la salle: ${args.room}`.blue);
+        logger.info(`Disponibilités pour la salle: ${args.room}`.blue);
         try {
             const freeByDay = service.getFreeSlotsForRoom(args.room);
+            const daysOrder = ['L', 'MA', 'ME', 'J', 'V'];
 
-            Object.keys(freeByDay).forEach(day => {
-                const intervals = freeByDay[day];
+            logger.info("\nLégende : " + "[====]".red + " Occupé / " + "[....]".green + " Libre\n");
+
+            daysOrder.forEach(day => {
+                const intervals = freeByDay[day] || [];
+                const timelineBar = renderTimeline(intervals);
+                
+                // Texte détaillé (ex: "10:00-12:00")
+                let details = "";
                 if (intervals.length === 0) {
-                    logger.info(`${day} : aucune plage libre`.yellow);
+                    details = "(Aucune plage libre)".yellow;
                 } else {
-                    const text = intervals
-                        .map(i => `${i.start}-${i.end}`)
-                        .join(", ");
-                    logger.info(`${day} : ${text}`.green);
+                    details = intervals.map(i => `${i.start}-${i.end}`).join(", ");
                 }
+
+                logger.info(`${day.padEnd(2)} : ${timelineBar}  ${details.grey}`);
             });
+            logger.info(""); 
         } catch (e) {
             logger.error(e.message.red);
         }
@@ -270,10 +315,19 @@ async function startMenu() {
             const f3 = await inquirer.prompt([{ type: "input", name: "room", message: "Nom de la salle :" }]);
             try {
                 const freeByDay = service.getFreeSlotsForRoom(f3.room);
-                Object.keys(freeByDay).forEach(day => {
-                    const intervals = freeByDay[day];
-                    if (intervals.length === 0) logger.info(`${day} : aucune plage libre`.yellow);
-                    else logger.info(`${day} : ${intervals.map(i => `${i.start}-${i.end}`).join(", ")}`.green);
+                // On force l'ordre des jours pour que ce soit propre
+                const daysOrder = ['L', 'MA', 'ME', 'J', 'V'];
+                
+                // On affiche la légende
+                console.log("\nLégende : " + "[====]".red + " Occupé / " + "[....]".green + " Libre\n");
+                
+                daysOrder.forEach(day => {
+                    const intervals = freeByDay[day] || [];
+                    // Appel de la fonction visuelle (assure-toi d'avoir bien collé la fonction renderTimeline en haut du fichier)
+                    const timelineBar = renderTimeline(intervals);
+                    
+                    let details = intervals.length === 0 ? "" : intervals.map(i => `${i.start}-${i.end}`).join(", ");
+                    logger.info(`${day.padEnd(2)} : ${timelineBar}  ${details.grey}`);
                 });
             } catch (e) { logger.error(e.message.red); }
             break;
