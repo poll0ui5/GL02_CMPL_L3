@@ -1,6 +1,7 @@
 const fs = require("fs");
 const colors = require("colors");
 const cli = require("@caporal/core").default;
+const inquirer = require("inquirer");
 const ScheduleService = require("./ScheduleService");
 
 const service = new ScheduleService();
@@ -217,4 +218,130 @@ cli
         }
     });
 
-cli.run(process.argv.slice(2));
+
+// --- MENU INTERACTIF ---
+async function startMenu() {
+    // On définit un petit logger pour remplacer celui de Caporal dans le menu
+    const logger = {
+        info: (msg) => console.log(msg),
+        warn: (msg) => console.warn(msg),
+        error: (msg) => console.error(msg)
+    };
+
+    const answer = await inquirer.prompt([
+        {
+            type: "list",
+            name: "action",
+            message: "MENU PRINCIPAL - Que souhaitez-vous faire ?",
+            pageSize: 10,
+            choices: [
+                { name: "(F1) Rechercher des salles par cours", value: "F1" },
+                { name: "(F2) Vérifier la capacité d'une salle", value: "F2" },
+                { name: "(F3) Voir les créneaux libres d'une salle", value: "F3" },
+                { name: "(F4) Trouver des salles libres (créneau)", value: "F4" },
+                { name: "(F5) Exporter en iCalendar (.ics)", value: "F5" },
+                { name: "(F6) Vérifier les conflits", value: "F6" },
+                { name: "(F7) Statistiques d'occupation", value: "F7" },
+                { name: "(F8) Classement des salles par capacité", value: "F8" },
+                new inquirer.Separator(),
+                { name: "Quitter", value: "quit" }
+            ]
+        }
+    ]);
+
+    switch (answer.action) {
+        case "F1":
+            const f1 = await inquirer.prompt([{ type: "input", name: "course", message: "Code du cours (ex: ME01) :" }]);
+            try {
+                const rooms = service.searchRoomsByCourse(f1.course);
+                rooms.forEach(r => logger.info(`${r.room} - ${r.capacity} places`.green));
+            } catch (e) { logger.error(e.message.red); }
+            break;
+
+        case "F2":
+            const f2 = await inquirer.prompt([{ type: "input", name: "room", message: "Nom de la salle (ex: S101) :" }]);
+            try {
+                const cap = service.getRoomCapacity(f2.room);
+                logger.info(`Salle ${f2.room.toUpperCase()} : ${cap} places`.green);
+            } catch (e) { logger.error(e.message.red); }
+            break;
+
+        case "F3":
+            const f3 = await inquirer.prompt([{ type: "input", name: "room", message: "Nom de la salle :" }]);
+            try {
+                const freeByDay = service.getFreeSlotsForRoom(f3.room);
+                Object.keys(freeByDay).forEach(day => {
+                    const intervals = freeByDay[day];
+                    if (intervals.length === 0) logger.info(`${day} : aucune plage libre`.yellow);
+                    else logger.info(`${day} : ${intervals.map(i => `${i.start}-${i.end}`).join(", ")}`.green);
+                });
+            } catch (e) { logger.error(e.message.red); }
+            break;
+
+        case "F4":
+            const f4 = await inquirer.prompt([
+                { type: "input", name: "day", message: "Jour (L, MA, ME, J, V) :" },
+                { type: "input", name: "start", message: "Heure de début (HH:MM) :" },
+                { type: "input", name: "end", message: "Heure de fin (HH:MM) :" }
+            ]);
+            try {
+                const rooms = service.getAvailableRooms(f4.start, f4.end, f4.day);
+                if (rooms.length === 0) logger.warn("Aucune salle trouvée.".yellow);
+                else rooms.forEach(r => logger.info(`- ${r}`.green));
+            } catch (e) { logger.error(e.message.red); }
+            break;
+
+        case "F5":
+            const f5 = await inquirer.prompt([
+                { type: "input", name: "courses", message: "Codes des cours séparés par des virgules (ex: ME01,ME02) :" },
+                { type: "input", name: "start", message: "Date de début (AAAA-MM-JJ) :" },
+                { type: "input", name: "end", message: "Date de fin (AAAA-MM-JJ) :" },
+                { type: "input", name: "output", message: "Nom du fichier (ex: agenda.ics) :", default: "mon_agenda.ics" }
+            ]);
+            try {
+                const periodStart = parseDate(f5.start, "start");
+                const periodEnd = parseDate(f5.end, "end");
+                const courses = f5.courses.split(",").map(c => c.trim()).filter(Boolean);
+                
+                const ics = service.generateICalendar({ courses, periodStart, periodEnd });
+                fs.writeFileSync(f5.output, ics, "utf8");
+                logger.info(`Export réussi : ${f5.output}`.green);
+            } catch (e) { logger.error(e.message.red); }
+            break;
+
+        case "F6":
+            try {
+                const conflicts = service.checkConflicts();
+                if (conflicts.length === 0) logger.info("Aucun conflit détecté".green);
+                else conflicts.forEach(c => logger.warn(`Conflit en ${c.room} (${c.day}) : ${c.slot1.startTime} chevauche ${c.slot2.startTime}`.red));
+            } catch (e) { logger.error(e.message.red); }
+            break;
+
+        case "F7":
+            try {
+                const { perRoom, average } = service.getRoomUsageStats();
+                Object.keys(perRoom).forEach(room => logger.info(`${room}: ${perRoom[room].toFixed(2)}%`.green));
+                logger.info(`\nMoyenne globale: ${average.toFixed(2)}%`.cyan);
+            } catch (e) { logger.error(e.message.red); }
+            break;
+
+        case "F8":
+            try {
+                const ranking = service.rankRoomsByCapacity();
+                ranking.forEach(item => logger.info(`${item.capacity} places : ${item.roomsCount} salle(s)`.green));
+            } catch (e) { logger.error(e.message.red); }
+            break;
+
+        case "quit":
+            console.log("Au revoir !");
+            process.exit(0);
+            break;
+    }
+}
+
+// --- DÉMARRAGE ---
+if (process.argv.slice(2).length === 0) {
+    startMenu();
+} else {
+    cli.run(process.argv.slice(2));
+}
