@@ -393,6 +393,34 @@ class ScheduleService {
                 roomsCount: capacityMap[cap].size
             }));
     }
+
+    /**
+ * Génère un contenu CSV à partir des créneaux chargés.
+ * @returns {string} Le contenu au format CSV.
+ */
+generateCSV() {
+    const slotSet = this.getAllSlots(); // Récupère tous les créneaux
+    const slots = slotSet.toArray();
+
+    // Définition de l'en-tête CSV
+    const header = "Cours,Type,Capacité,Jour,Début,Fin,Salle,Sous-groupe";
+    
+    // Transformation de chaque objet Slot en ligne CSV
+    const rows = slots.map(slot => {
+        return [
+            slot.courseCode,
+            slot.lessonType,
+            slot.capacity,
+            slot.day,
+            slot.startTime,
+            slot.endTime,
+            slot.room,
+            slot.subgroup
+        ].join(",");
+    });
+
+    return [header, ...rows].join("\n");
+}
 }
 
 module.exports = ScheduleService;

@@ -261,6 +261,21 @@ cli
         } catch (e) {
             logger.error(e.message.red);
         }
+    })
+
+    .command("export-csv", "Exporter les données d'emploi du temps au format CSV")
+    .option("-o, --output <output>", "Chemin du fichier de sortie", { 
+        validator: cli.STRING, 
+        default: "./export_edt.csv" 
+    })
+    .action(({ options, logger }) => {
+        try {
+            const csvContent = service.generateCSV();
+            fs.writeFileSync(options.output, csvContent, "utf8");
+            logger.info(`Export CSV réussi : ${options.output}`.green);
+        } catch (e) {
+            logger.error(`Erreur lors de l'export CSV : ${e.message}`.red);
+        }
     });
 
 
@@ -288,6 +303,7 @@ async function startMenu() {
                 { name: "(F6) Vérifier les conflits", value: "F6" },
                 { name: "(F7) Statistiques d'occupation", value: "F7" },
                 { name: "(F8) Classement des salles par capacité", value: "F8" },
+                { name: "(CSV) Exporter les données en CSV", value: "CSV" },
                 new inquirer.Separator(),
                 { name: "Quitter", value: "quit" }
             ]
@@ -384,6 +400,24 @@ async function startMenu() {
                 const ranking = service.rankRoomsByCapacity();
                 ranking.forEach(item => logger.info(`${item.capacity} places : ${item.roomsCount} salle(s)`.green));
             } catch (e) { logger.error(e.message.red); }
+            break;
+
+        case "CSV":
+            const fCsv = await inquirer.prompt([
+                { 
+                    type: "input", 
+                    name: "output", 
+                    message: "Nom du fichier CSV (ex: data.csv) :", 
+                    default: "export_edt.csv" 
+                }
+            ]);
+            try {
+                const csv = service.generateCSV();
+                fs.writeFileSync(fCsv.output, csv, "utf8");
+                logger.info(`Export réussi : ${fCsv.output}`.green);
+            } catch (e) { 
+                logger.error(`Erreur : ${e.message}`.red); 
+            }
             break;
 
         case "quit":
