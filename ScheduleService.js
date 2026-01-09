@@ -395,32 +395,49 @@ class ScheduleService {
     }
 
     /**
- * Génère un contenu CSV à partir des créneaux chargés.
- * @returns {string} Le contenu au format CSV.
- */
-generateCSV() {
-    const slotSet = this.getAllSlots(); // Récupère tous les créneaux
-    const slots = slotSet.toArray();
+    * Génère un contenu CSV à partir des créneaux chargés.
+    * @returns {string} Le contenu au format CSV.
+    */
+    generateCSV() {
+        const slotSet = this.getAllSlots();
+        const slots = slotSet.toArray();
 
-    // Définition de l'en-tête CSV
-    const header = "Cours,Type,Capacité,Jour,Début,Fin,Salle,Sous-groupe";
+        const header = "Cours,Type,Capacité,Jour,Début,Fin,Salle,Sous-groupe";
     
-    // Transformation de chaque objet Slot en ligne CSV
-    const rows = slots.map(slot => {
-        return [
-            slot.courseCode,
-            slot.lessonType,
-            slot.capacity,
-            slot.day,
-            slot.startTime,
-            slot.endTime,
-            slot.room,
-            slot.subgroup
-        ].join(",");
-    });
+        const rows = slots.map(slot => {
+            return [
+                slot.courseCode,
+                slot.lessonType,
+                slot.capacity,
+                slot.day,
+                slot.startTime,
+                slot.endTime,
+                slot.room,
+                slot.subgroup
+            ].join(",");
+        });
 
-    return [header, ...rows].join("\n");
-}
+        return [header, ...rows].join("\n");
+    }
+
+
+    /**
+     * Récupère la liste unique de tous les codes de cours présents dans les données.
+     * @returns {string[]}
+     */
+    getAllCourseCodes() {
+        const slots = this.getAllSlots().toArray();
+        return [...new Set(slots.map(s => s.courseCode))].sort();
+    }
+
+    /**
+     * Récupère la liste unique de toutes les salles présentes dans les données.
+     * @returns {string[]}
+     */
+    getAllRooms() {
+        const slots = this.getAllSlots().toArray();
+        return [...new Set(slots.map(s => s.room))].filter(Boolean).sort();
+    }
 }
 
 module.exports = ScheduleService;

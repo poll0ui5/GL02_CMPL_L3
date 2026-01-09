@@ -312,23 +312,45 @@ async function startMenu() {
 
     switch (answer.action) {
         case "F1":
-            const f1 = await inquirer.prompt([{ type: "input", name: "course", message: "Code du cours (ex: ME01) :" }]);
+            const courseCodes = service.getAllCourseCodes();
+            const f1 = await inquirer.prompt([{ 
+                type: "list", 
+                name: "course", 
+                message: "Sélectionnez le code du cours :",
+                choices: courseCodes,
+                pageSize: 10
+            }]);
             try {
                 const rooms = service.searchRoomsByCourse(f1.course);
                 rooms.forEach(r => logger.info(`${r.room} - ${r.capacity} places`.green));
             } catch (e) { logger.error(e.message.red); }
             break;
 
-        case "F2":
-            const f2 = await inquirer.prompt([{ type: "input", name: "room", message: "Nom de la salle (ex: S101) :" }]);
+        case "F2": { 
+            const rooms = service.getAllRooms();
+            const f2 = await inquirer.prompt([{ 
+                type: "list", 
+                name: "room", 
+                message: "Sélectionnez la salle :",
+                choices: rooms,
+                pageSize: 10
+            }]);
             try {
                 const cap = service.getRoomCapacity(f2.room);
                 logger.info(`Salle ${f2.room.toUpperCase()} : ${cap} places`.green);
             } catch (e) { logger.error(e.message.red); }
             break;
+        }
 
         case "F3":
-            const f3 = await inquirer.prompt([{ type: "input", name: "room", message: "Nom de la salle :" }]);
+            const rooms = service.getAllRooms();
+            const f3 = await inquirer.prompt([{ 
+                type: "list", 
+                name: "room", 
+                message: "Sélectionnez la salle :",
+                choices: rooms,
+                pageSize: 10
+            }]);
             try {
                 const freeByDay = service.getFreeSlotsForRoom(f3.room);
                 // On force l'ordre des jours pour que ce soit propre
