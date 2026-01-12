@@ -420,6 +420,60 @@ class ScheduleService {
         return [header, ...rows].join("\n");
     }
 
+    // --- F9: MEETING FINDER ---
+    /**
+     * Trouve les créneaux où AUCUN des cours donnés n'a lieu.
+     * @param {string[]} coursesList - Liste des codes (ex: ['GL02', 'SY02'])
+     */
+    findCommonFreeSlots(coursesList) {
+        const slotSet = this.getAllSlots();
+        const relevantSlots = slotSet
+            .filter(slot => coursesList.includes(slot.courseCode))
+            .toArray();
+
+        // Grille : L, MA, ME, J, V de 8h à 20h (12h * 2 blocs de 30min = 24 blocs)
+        const grid = {};
+        DAY_CODES.forEach(d => grid[d] = new Array(24).fill(true));
+
+        relevantSlots.forEach(slot => {
+            if (!grid[slot.day]) return;
+            const startMin = this._toMinutes(slot.startTime);
+            const endMin = this._toMinutes(slot.endTime);
+
+            const startIndex = Math.floor((startMin - OPEN_MINUTES) / 30);
+            const endIndex = Math.ceil((endMin - OPEN_MINUTES) / 30);
+
+            for (let i = startIndex; i < endIndex; i++) {
+                if (i >= 0 && i < grid[slot.day].length) {
+                    grid[slot.day][i] = false; // Occupé
+                }
+            }
+        });
+
+        const report = [];
+        DAY_CODES.forEach(day => {
+            let currentStart = null;
+            for (let i = 0; i < grid[day].length; i++) {
+                if (grid[day][i]) {
+                    if (currentStart === null) currentStart = i;
+                } else {
+                    if (currentStart !== null) {
+                        report.push(`${day} : ${this._indexToTime(currentStart)} - ${this._indexToTime(i)}`);
+                        currentStart = null;
+                    }
+                }
+            }
+            if (currentStart !== null) {
+                report.push(`${day} : ${this._indexToTime(currentStart)} - 20:00`);
+            }
+        });
+        return report;
+    }
+
+    _indexToTime(idx) {
+        const totalMin = OPEN_MINUTES + (idx * 30);
+        return this._formatTime(totalMin);
+    }
 
     /**
      * Récupère la liste unique de tous les codes de cours présents dans les données.

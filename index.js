@@ -276,6 +276,25 @@ cli
         } catch (e) {
             logger.error(`Erreur lors de l'export CSV : ${e.message}`.red);
         }
+    })
+    // F9 – Meeting Finder
+    .command("find-meeting", "Trouver des créneaux communs pour une liste de cours")
+    .argument("<courses>", "Liste des cours séparés par des virgules (ex: GL02,SY02)")
+    .action(({ args, logger }) => {
+        logger.info(`Recherche de créneaux communs pour : ${args.courses}`.blue);
+        try {
+            const list = args.courses.split(",").map(c => c.trim());
+            const slots = service.findCommonFreeSlots(list);
+
+            if (slots.length === 0) {
+                logger.warn("Aucun créneau commun trouvé.".yellow);
+            } else {
+                logger.info("✅ Créneaux disponibles :".green);
+                slots.forEach(s => logger.info(`   ${s}`));
+            }
+        } catch (e) {
+            logger.error(e.message.red);
+        }
     });
 
 
@@ -421,6 +440,14 @@ async function startMenu() {
             try {
                 const ranking = service.rankRoomsByCapacity();
                 ranking.forEach(item => logger.info(`${item.capacity} places : ${item.roomsCount} salle(s)`.green));
+            } catch (e) { logger.error(e.message.red); }
+            break;
+
+        case "F9":
+            const f9 = await inquirer.prompt([{ type: "input", name: "courses", message: "Cours (ex: GL02,SY02) :" }]);
+            try {
+                const slots = service.findCommonFreeSlots(f9.courses.split(",").map(c => c.trim()));
+                slots.forEach(s => logger.info(s.green));
             } catch (e) { logger.error(e.message.red); }
             break;
 
