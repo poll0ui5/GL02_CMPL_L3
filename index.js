@@ -295,6 +295,28 @@ cli
         } catch (e) {
             logger.error(e.message.red);
         }
+    })
+    // F10 – Backup Room
+    .command("backup-room", "Trouver une salle de remplacement en urgence")
+    .argument("<room>", "La salle qui pose problème (ex: P104)")
+    .action(({ args, logger }) => {
+        logger.info(`Recherche alternative pour ${args.room}...`.blue);
+        try {
+            const result = service.findBackupRoom(args.room);
+            logger.info(`Contexte : ${result.context.day} ${result.context.start}-${result.context.end}`.grey);
+
+            if (result.candidates.length === 0) {
+                logger.error("❌ Aucune salle équivalente trouvée.".red);
+            } else {
+                logger.info(`✅ ${result.candidates.length} alternatives trouvées :`.green);
+                result.candidates.forEach((c, idx) => {
+                    const icon = idx === 0 ? "🏆" : "👉";
+                    logger.info(`${icon} Salle ${c.room} (${c.cap} places)`);
+                });
+            }
+        } catch (e) {
+            logger.error(e.message.red);
+        }
     });
 
 
@@ -448,6 +470,14 @@ async function startMenu() {
             try {
                 const slots = service.findCommonFreeSlots(f9.courses.split(",").map(c => c.trim()));
                 slots.forEach(s => logger.info(s.green));
+            } catch (e) { logger.error(e.message.red); }
+            break;
+
+        case "F10":
+            const f10 = await inquirer.prompt([{ type: "input", name: "room", message: "Salle HS :" }]);
+            try {
+                const res = service.findBackupRoom(f10.room);
+                res.candidates.forEach(c => logger.info(`-> ${c.room} (${c.cap} places)`.green));
             } catch (e) { logger.error(e.message.red); }
             break;
 

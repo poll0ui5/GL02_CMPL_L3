@@ -475,6 +475,41 @@ class ScheduleService {
         return this._formatTime(totalMin);
     }
 
+    // --- F10: BACKUP ROOM ---
+    /**
+     * Trouve une alternative immédiate pour une salle.
+     */
+    findBackupRoom(brokenRoom) {
+        const capacity = this.getRoomCapacity(brokenRoom);
+        const building = brokenRoom.charAt(0).toUpperCase();
+
+        // Créneau de test (Lundi 10h-12h) pour la démo
+        const testDay = "L";
+        const testStart = "10:00";
+        const testEnd = "12:00";
+
+        const freeRooms = this.getAvailableRooms(testStart, testEnd, testDay);
+        const allSlots = this.getAllSlots().toArray();
+
+        const candidates = [];
+        freeRooms.forEach(room => {
+            if (!room.startsWith(building)) return;
+            // Calcul capacité max connue
+            const cap = Math.max(...allSlots.filter(s => s.room === room).map(s => s.capacity));
+
+            if (cap >= capacity) {
+                candidates.push({ room, cap });
+            }
+        });
+
+        candidates.sort((a, b) => a.cap - b.cap);
+
+        return {
+            original: { room: brokenRoom, capacity },
+            candidates,
+            context: { day: testDay, start: testStart, end: testEnd }
+        };
+    }
     /**
      * Récupère la liste unique de tous les codes de cours présents dans les données.
      * @returns {string[]}
